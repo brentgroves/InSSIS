@@ -1,0 +1,41 @@
+Add this statement to the 'ReIndex Tooling Transaction Log' SQL Server Agen Job as
+a Transact-SQL script type step:
+execute [dbo].[bpReindex]
+
+Stored Procedures
+USE [m2mdata01]
+GO
+
+/****** Object:  StoredProcedure [dbo].[bpReindex]    Script Date: 4/19/2018 10:21:59 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create procedure [dbo].[bpReindex]
+AS
+BEGIN
+	IF EXISTS(select * from sys.indexes where object_id = OBJECT_ID('ToolingTransLog') and name = 'TranStartDateTimeIndex')
+		DROP INDEX ToolingTransLog.TranStartDateTimeIndex
+
+	CREATE NONCLUSTERED INDEX TranStartDateTimeIndex
+	ON [dbo].[ToolingTransLog] ([TranStartDateTime])
+	INCLUDE ([PartNumber],[ItemNumber],[Qty],[UNITCOST])
+
+	IF EXISTS(select * from sys.indexes where object_id = OBJECT_ID('ladetail') and name = 'ToolCostSummary')
+		DROP INDEX ladetail.ToolCostSummary
+
+	CREATE NONCLUSTERED INDEX ToolCostSummary
+	ON [dbo].[ladetail] ([fstatus],[fcompqty],[fedatetime])
+	INCLUDE ([fempno],[fjobno],[foperno])
+
+	IF EXISTS(select * from sys.indexes where object_id = OBJECT_ID('btDistinctToolLists') and name = 'ToolCostSummary')
+		DROP INDEX btDistinctToolLists.ToolCostSummary
+
+	CREATE NONCLUSTERED INDEX ToolCostSummary
+	ON [dbo].[btDistinctToolLists] ([PartNumber])
+	INCLUDE ([CustPartFamily])
+
+END
+GO
